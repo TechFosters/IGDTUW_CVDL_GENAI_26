@@ -132,65 +132,175 @@ def process_frame(frame):
          
          cv2.putText(frame, f" YOLO: {confidence: .0%}", (x1, y2+20), cv2.FONT_HERSHEY_SIMPLEX, 0.45, (200,200,200), 1)
          
+     return frame
          
-def test_video(video_path):
-    
-    
-    print(" \n video: {video_path}")
-    
-    cap = cv2.VideoCapture(video_path)
-    
-    if not cap.isOpened():
-        print("Video not loaded")  
-        return
-         
-    fps = int(cap.get(cv2.CAP_PROP_FPS))
-    
-    width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-    height = int(cap.get(cv2.CAP_PROP_FARME_HEIGHT))
-    
-    save_path  = video_path.replace(".", "_yolo_result.")
-    
-    fourcc = cv2.VideoWriter_fourcc(*"mp4v")
-    
-    out = cv2.VideoWriter(save_path, fourcc, fps, (width, height))
-    
-    frame_num = 0
-    print(" processing")
-    
-    while True:
-        ret, frame, = cap.read()
-        
-        if not ret:
-            print(" Video nahi mili | video complete ho gyi")
-            break
-        
-        frame_num += 1
-        
-        result_frame = process_frame(frame)
-        
-        cv2.putText(result_frame, f" FRame: {frame_num}", (width-180, height-10), cv2.FONT_HERSHEY_SIMPLEX, 0.55, (200,200,200),1 
-                    )
-        
-        cv2.imshow("YOLOv12 + MobileNetV2 - Video", result_frame)
-        
-        
-        
-        if cv2.waitKey(1) & "OxFF" in [ord("q"), 27]:
-            print(" User stopped it")
-            break
-        
-    cap.release()
-    
-    cv2.destroyAllWindows()
-    print("video saved")
-            
-    
+ #MODE 1        
+def test_image(img_path):
+    #Single image pe test karo
+    print(f"\ Image: {img_path}")
 
-        
-        
-    
-         
-        
-            
-    
+    frame = cv2.imread(img_path)
+    if frame is None:
+        print("❌ Image nahi mili! Path check karo.")
+        return
+
+    # Process karo
+    result_frame = process_frame(frame)
+
+    # Dikhao
+    cv2.imshow("YOLOv8 + MobileNetV2 — Image", result_frame)
+    print("Koi bhi key dabao band karne ke liye...")
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
+
+    # Save karo
+    save_path = img_path.replace(".", "_yolo_result.")
+    cv2.imwrite(save_path, result_frame)
+    print(f" Saved: {save_path}")
+
+
+
+# MODE 2: VIDEO
+
+
+def test_video(video_path):
+    #Video file pe test karo
+    print(f"\n Video: {video_path}")
+
+    cap = cv2.VideoCapture(video_path)
+    if not cap.isOpened():
+        print(" Video nahi mili! Path check karo.")
+        return
+
+    fps    = int(cap.get(cv2.CAP_PROP_FPS))
+    width  = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+    height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+    total  = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+
+    print(f"   {width}*{height} | {fps} FPS | {total} frames")
+
+    # Output video
+    save_path = video_path.replace(".", "_yolo_result.")
+    fourcc = cv2.VideoWriter_fourcc(*"mp4v")
+    out = cv2.VideoWriter(save_path, fourcc, fps, (width, height))
+
+    frame_num = 0
+    print("   Processing... (Press Q to quit)")
+
+    while True:
+        ret, frame = cap.read()
+        if not ret:
+            print("  Video complete!")
+            break
+
+        frame_num += 1
+
+        # Har frame pe process karo
+        result_frame = process_frame(frame)
+
+        # Frame number dikhao
+        cv2.putText(result_frame, f"Frame: {frame_num}/{total}",
+                    (width - 180, height - 10),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.55,
+                    (200, 200, 200), 1)
+
+        # Screen pe dikhao
+        cv2.imshow("YOLOv8 + MobileNetV2 — Video", result_frame)
+
+        # Output mein save karo
+        out.write(result_frame)
+
+        # Q = quit
+        if cv2.waitKey(1) & 0xFF in [ord("q"), 27]:
+            print("   User ne band kiya.")
+            break
+
+    cap.release()
+    out.release()
+    cv2.destroyAllWindows()
+    print(f" Result saved: {save_path}")
+
+
+
+# MODE 3: LIVE WEBCAM
+
+
+def test_webcam(camera_index=0):
+    #Live webcam se real-time detection
+    print(f"\ Webcam ({camera_index}) statreing...")
+    print("   Q ya ESC dabao band karne ke liye")
+
+    cap = cv2.VideoCapture(camera_index)
+    if not cap.isOpened():
+        print("❌ Webcam nahi mili!")
+        return
+
+    cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+
+    import time
+    prev_time = time.time()
+
+    while True:
+        ret, frame = cap.read()
+        if not ret:
+            break
+
+        # Mirror
+        frame = cv2.flip(frame, 1)
+
+        # Process karo
+        result_frame = process_frame(frame)
+
+        # FPS calculate karo
+        curr_time = time.time()
+        fps = 1 / max(curr_time - prev_time, 0.001)
+        prev_time = curr_time
+
+        # FPS dikhao
+        h, w = result_frame.shape[:2]
+        cv2.putText(result_frame, f"FPS: {fps:.0f}",(w - 100, 35),cv2.FONT_HERSHEY_SIMPLEX, 0.7,(0, 255, 255), 2)
+        # Yellow mein FPS
+
+        cv2.imshow("YOLOv8 + MobileNetV2 — Live", result_frame)
+
+        if cv2.waitKey(1) & 0xFF in [ord("q"), 27]:
+            break
+
+    cap.release()
+    cv2.destroyAllWindows()
+    print("✅ Webcam band ho gayi!")
+
+
+# MAIN
+
+
+if __name__ == "__main__":
+
+    print("=" * 55)
+    print("   YOLOv8 + MobileNetV2 — Face Mask Detection")
+    print("=" * 55)
+    print()
+    print("  1 :Image file")
+    print("  2 : Video file")
+    print("  3: Live Webcam")
+    print()
+
+    choice = input("Choice (1/2/3): ").strip()
+
+    if choice == "1":
+        path = input("Image path: ").strip()
+        test_image(path)
+
+    elif choice == "2":
+        path = input("Video path: ").strip()
+        test_video(path)
+
+    elif choice == "3":
+        cam = input("Camera index (0=built-in, Enter=default): ").strip()
+        test_webcam(int(cam) if cam else 0)
+
+    else:
+        print(" 1, 2, ya 3 enter karo!")
+
+
