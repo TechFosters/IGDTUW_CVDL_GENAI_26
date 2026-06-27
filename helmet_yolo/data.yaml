@@ -1,0 +1,11 @@
+# YOLOv8 Helmet Detection Datset config #data kahan hai aur classe skya hai
+
+path: /Users/akshitmudgal/Desktop/IGDTUW_DIP/helmet_yolo
+train: images/train
+val: images/val
+
+nc: 2
+names:
+    0: with_helmet
+    1: without_helmet
+
